@@ -1,4 +1,5 @@
 #import "@template/template:0.1.0": *
+#show link: set text(fill: blue)
 #show: doc => document("Godot Note", "B13902066 蔡孟憬", doc)
 #show: codly-init.with()
 
@@ -39,6 +40,8 @@ func _physics_process(delta: float) -> void:
 	text(size: 14pt)[#align(center)[實作1︰點擊角色縮放]]
 )
 
+#link("https://github.com/cmj0415/Godot-practice/commit/b7dd308f1b7d0f13be7a34ef968b6a6032686f47#diff-e0c9754ebacfcbb51ab5610ccae23d909248a6c9496c6335712218781bd27a00")[完整程式]
+
 使用`_input_event()`實作︰
 
 ```gdscript
@@ -75,3 +78,48 @@ Physics Picking是在事件未被前面階段消耗時才進行。如果是用`_
 Godot中的scale是受節點父子關係影響的。當更改了一個節點的scale，那麼它的子節點們在世界中的大小都會隨之變化。簡而言之，
 $ "global transform = local transform"times"parent transform" $
 因此，當縮放施加在`CharacterBody2D`上，它的子節點（這裡是`Sprite2D`和`CollisionShape2D`）也會跟著被縮放。
+
+#pagebreak()
+
+#block(
+	width: auto,
+	height: 2em,
+	stroke: 1pt,
+	inset: 0.5em,
+	text(size: 14pt)[#align(center)[實作2︰按住左鍵拖曳角色]]
+)
+
+這裡我們會稍微改變一下前面判斷縮放的方法。因為拖曳時同樣是先按下了左鍵，因此會導致拖曳時角色跟著放大。我們使用`pressed_on_me`和`dragging`兩個變數記錄角色「是否被點」和「是否在拖曳狀態中」。如果角色「有被點」且「不是在拖曳狀態中」才進行縮放。
+
+- 拖曳的判斷
+我們使用拖曳的長度是否超過某個閾值來判斷是否在拖曳狀態中（程式中使用`moved_distance`來記錄）。因為`_input_event()`只處理游標「命中」當下的事件，因此在後續的拖曳過程中，應交給`_unhandled_input()`來處理這段時間內的事件。大致邏輯架構如下（只寫出拖曳所需邏輯，其他請見完整程式碼）︰
+
+```gdscript
+func _input_event(viewport, event, shape_idx):
+	if event is InputEventMouseButton：
+		if event.pressed:
+			pressed_on_me = true
+			dragging = false
+			moved_distance = 0.0
+			drag_offset_global = global_position - get_global_mouse_position()
+			get_viewport().set_input_as_handled()
+		else:
+			# 處理放開時的行為，如判斷是否要進行縮放
+				
+func _unhandled_input(event):	
+	if not pressed_on_me:
+		return		
+	if event is InputEventMouseMotion:
+		moved_distance += event.relative.length()		
+		if not dragging and moved_distance >= drag_threshold:
+			dragging = true
+		if dragging:
+			global_position = get_global_mouse_position() + drag_offset_global
+			get_viewport().set_input_as_handled()
+```
+如果需要拖曳時不受重力影響，在`_physics_process()`內加上`if dragging: return`即可。
+- 角色位置的計算
+`InputEventMouseMotion`中的`relative`屬性代表游標相對於上一幀的偏移量。程式第6行計算的是「點擊當下」，角色位置相對於游標位置的偏移量。因此，當拖曳中每一幀要更新角色位置時，即是用當下的游標位置加上偏移量。
+#note()[
+	只有在滑鼠「按下」和「放開」時事件的類型是`InputEventMouseButton`，拖曳中都是`InputEventMouseMotion`。按下時`event.pressed`為`true`，放開時為`false`。
+]
