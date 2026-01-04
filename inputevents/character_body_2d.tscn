@@ -28,3 +28,8 @@ texture = ExtResource("2_ij6vw")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="CharacterBody2D"]
 position = Vector2(2, -0.5)
 shape = SubResource("RectangleShape2D_ghijl")
+
+[node name="Sprite2D2" type="Sprite2D" parent="CharacterBody2D"]
+position = Vector2(3, 0)
+rotation = 3.1415927
+texture = ExtResource("2_ij6vw")

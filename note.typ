@@ -89,6 +89,8 @@ $ "global transform = local transform"times"parent transform" $
 	text(size: 14pt)[#align(center)[實作2︰按住左鍵拖曳角色]]
 )
 
+#link("https://github.com/cmj0415/Godot-practice/commit/f67004e57aded737e4073d69d5ba6d41ab03668d")[完整程式]
+
 這裡我們會稍微改變一下前面判斷縮放的方法。因為拖曳時同樣是先按下了左鍵，因此會導致拖曳時角色跟著放大。我們使用`pressed_on_me`和`dragging`兩個變數記錄角色「是否被點」和「是否在拖曳狀態中」。如果角色「有被點」且「不是在拖曳狀態中」才進行縮放。
 
 - 拖曳的判斷
@@ -123,3 +125,67 @@ func _unhandled_input(event):
 #note()[
 	只有在滑鼠「按下」和「放開」時事件的類型是`InputEventMouseButton`，拖曳中都是`InputEventMouseMotion`。按下時`event.pressed`為`true`，放開時為`false`。
 ]
+
+#text(size: 16pt)[1/4]
+#block(
+	width: auto,
+	height: 2em,
+	stroke: 1pt,
+	inset: 0.5em,
+	text(size: 14pt)[#align(center)[實作3︰雙擊切換角色型態]]
+)
+在我們的程式中，單擊是有功能的。因此，如果玩家要使用雙擊，我們不能讓單擊的功能在玩家點第一下時就執行。雖然Godot有`event.double_click`來判斷是否是雙擊事件，但卻沒有無法在玩家點擊第一下時預測到這到底是單擊事件還是雙擊事件。舉例來說，以下的程式碼會造成錯誤的執行結果︰
+```gdscript
+if event.double_click:
+	_on_double_click()
+else:
+	_on_single_click()
+```
+這會造成雙擊的第一下也執行`_on_single_click()`。
+
+- 雙擊的判斷條件
+我們將雙擊定義為︰
++ 兩次點擊的時間間隔不超過`double_click_time`
++ 兩次點擊的距離間隔不超過`double_click_dist`
+- 區分單擊與雙擊
+由於不能在點擊第一下時就執行`_on_single_click()`，因此需要有一個計時器來「延遲執行」。我們需要用一些變數記錄資訊︰
++ `waiting_for_second`記錄是否正在等待可能的第二次點擊
++ `last_click_time`記錄上一次點擊的時間
++ `last_click_pos`記錄上一次點擊的位置
+
+大致邏輯如下（只寫出區分單擊與雙擊的邏輯，其他請見完整程式碼）︰
+```gdscript
+func _input_event(viewport, event, shape_idx):
+	if event is InputEventMouseButton:
+		if event.button_index != MOUSE_BUTTON_LEFT:
+			return	
+
+		# 放開時才做！
+		if not event.pressed: 
+			var now := Time.get_ticks_msec()
+			if waiting_for_second:
+				if now - last_click_time <= double_click_time \
+					and event.position.distance_to(last_click_pos) <= double_click_dist:
+					waiting_for_second = false
+					_on_double_click()
+					get_viewport().set_input_as_handled()
+					return
+				else:
+					last_click_time = now
+					last_click_pos = event.position
+					waiting_for_second = true
+			else:
+				last_click_time = now
+				last_click_pos = event.position
+				waiting_for_second = true
+			get_viewport().set_input_as_handled()
+		
+func _process(delta):
+	if not waiting_for_second:
+		return
+	var now := Time.get_ticks_msec()
+	if now - last_click_time > double_click_time:
+		_on_single_click()
+		waiting_for_second = false
+```
+這裡我們使用會被逐幀呼叫的`_process`當作計時器，當一個點擊還在等待第二次點擊，但時間已經超過雙擊的限制，那麼就執行`_on_single_click()`。
