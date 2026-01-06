@@ -1,4 +1,5 @@
 #import "@template/template:0.1.0": *
+#import emoji: *
 #show link: set text(fill: blue)
 #show: doc => document("Godot Note", "B13902066 蔡孟憬", doc)
 #show: codly-init.with()
@@ -134,6 +135,8 @@ func _unhandled_input(event):
 	inset: 0.5em,
 	text(size: 14pt)[#align(center)[實作3︰雙擊切換角色型態]]
 )
+#link("https://github.com/cmj0415/Godot-practice/commit/cf993bdc3109cc6ed3c130beee26e3b3942844a1")[完整程式]
+
 在我們的程式中，單擊是有功能的。因此，如果玩家要使用雙擊，我們不能讓單擊的功能在玩家點第一下時就執行。雖然Godot有`event.double_click`來判斷是否是雙擊事件，但卻沒有無法在玩家點擊第一下時預測到這到底是單擊事件還是雙擊事件。舉例來說，以下的程式碼會造成錯誤的執行結果︰
 ```gdscript
 if event.double_click:
@@ -189,3 +192,107 @@ func _process(delta):
 		waiting_for_second = false
 ```
 這裡我們使用會被逐幀呼叫的`_process`當作計時器，當一個點擊還在等待第二次點擊，但時間已經超過雙擊的限制，那麼就執行`_on_single_click()`。
+
+#text(size: 16pt)[1/5]
+#block(
+	width: auto,
+	height: 2em,
+	stroke: 1pt,
+	inset: 0.5em,
+	text(size: 14pt)[#align(center)[關於變數和參考的一些事]]
+)
+
+- `@onready`
+在實作中我們常常需要取得其他節點的參考。我們會在開頭的變數區宣告
+```gdscript
+@onready var Node := $path_to_node
+```
+這等價於︰
+```gdscript
+var Node
+func _ready():
+	Node = get_node(path_to_node)
+```
+接下來我們就可以取得該節點的變數。但說實在的，如果隨便去抓別的節點的變數來用，光聽就覺得不是個好的practice$face.sneeze$。通常在要存取參考的節點有父子關係、或者是只有要讀取資料時才會用。
+
+- `@export`
+這個annotation可以讓變數能夠直接在側欄的Inspector中修改，通常遊戲的參數都會需要暴露到Inspector中方便修改。
+
+以下宣告會在Inspector中出現右圖的畫面︰
+#grid(
+	columns: (auto, auto),
+	[
+		```gdscript
+		@export var height := 10.0
+		@export var weight := 50.0
+		@export var hp := 100
+		@export var atk := 5
+		@export var def := 4
+		@export var walk_speed := 10.0
+		@export var sprint_speed := 15.0
+		@export var jmp_height := 2.0
+		```
+	],[
+		#figure(
+			image("Screenshot from 2026-01-06 15-09-07.png", width: 60%)
+		)
+	]
+)
+我們也可以搭配`@export_group`和`@export_category`進行更清楚的分類管理，`@export_range`可以限制變數的範圍	︰
+#grid(
+	columns: (auto, auto),
+	[
+		```gdscript
+		@export_category("Body")
+		@export var height := 10.0
+		@export var weight := 50.0
+
+		@export_category("Combat")
+		@export_group("Health")
+		@export var hp := 100
+
+		@export_group("Attack")
+		@export_range(5, 10) var atk := 5
+
+		@export_category("Movement")
+		@export_group("Horizontal")
+		@export var walk_speed := 10.0
+		@export var sprint_speed := 15.0
+
+		@export_group("Vertical")
+		@export var jmp_height := 2.0
+		```
+	],[
+		#figure(
+			image("Screenshot from 2026-01-06 15-19-50.png", width: 60%)
+		)
+	]
+)
+#pagebreak()
+- 共享資料
+前面有說過可以用`@onready`取得其他節點的參考並使用該節點的變數，不過有時候並不是一個好的實作。以下有幾種方法做到資源共享︰
+
+1. Autoload全域變數
+我們可以開一個`.gd`檔放全域變數，並在Project$->$Project Settings$->$Globals$->$Autoload的地方加入該腳本，任何節點都可以使用這份腳本內的變數。
+#figure(
+	image("Screenshot from 2026-01-06 19-00-30.png", width: 60%)
+)
+2. Static Variables
+直接引用官方文件︰
+#block(
+  fill: luma(230),
+  inset: 8pt,
+  radius: 4pt,
+  [Since Godot 4.1, GDScript also supports `static` variables using `static var`. This means you can now share variables across instances of a class without having to create a separate autoload.],
+)
+使用靜態變數可以很好地讓一個類別的所有實例共用相同的變數。舉例來說，如果我建立一個`Enemy`類別︰
+```gdscript
+# enemy.gd
+extends Node2D
+class_name Enemy
+
+static var enemy_count := 0
+```
+那麼所有繼承了`Enemy`類別的節點都可以用`Enemy.enemy_count`取得這個變數。
+
+除了靜態變數以外，Godot也提供「靜態函式（static functions）」，接下來寫到類別時再一起說明。
