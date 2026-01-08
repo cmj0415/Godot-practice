@@ -296,3 +296,43 @@ static var enemy_count := 0
 那麼所有繼承了`Enemy`類別的節點都可以用`Enemy.enemy_count`取得這個變數。
 
 除了靜態變數以外，Godot也提供「靜態函式（static functions）」，接下來寫到類別時再一起說明。
+
+#pagebreak()
+
+#text(size: 16pt)[1/7]
+#block(
+	width: auto,
+	height: 2em,
+	stroke: 1pt,
+	inset: 0.5em,
+	text(size: 14pt)[#align(center)[關於類別的一些事]]
+)
+Godot畢竟還是個OOP語言，所以有關class的事情還是要講一下的。要建立一個類別，只需要在腳本開頭以`class_name`宣告，即可作為全域類別使用。
+
+類別可以是一個節點︰
+```gdscript
+extends CharacterBody2D
+class_name Player
+```
+其他節點可以使用`Player.new()`新增一個`Player`物件實例，但因為還沒加入場景樹，不受生命週期影響。也就是說，`_ready()`、`_process()`等都還不會有作用。
+
+節點也可以使用`extends Player`來繼承這個類別，代表「我就是個`Player`」，可以使用`Player`的方法、被當成`Player`來用、遵守`Player`的生命週期。且`Player`本身是一個`CharacterBody2D`，因此這個節點也仍然可以被當成`CharacterBody2D`。
+
+類別也可以純粹當作功能型的library使用，通常搭配`static func`︰
+```gdscript
+class_name MathUtils
+
+static func factorize(x: int) -> Array:
+	# factorize
+```
+這樣其他節點可以直接使用`MathUtils.factorize()`呼叫函式。
+#note(title: "靜態函式的注意事項")[
+  By 官方文件︰
+  #block(
+	fill: luma(230),
+	inset: 8pt,
+	radius: 4pt,
+	[The limitation of static functions is that they can't reference member variables, non-static functions or `self`.],
+  )
+  換言之，靜態變數就是當作函式庫使用，只處理吃進來的輸入而已，不該動到其他東西。
+]
